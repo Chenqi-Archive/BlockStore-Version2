@@ -1,9 +1,4 @@
-#include "BlockStore/test.h"
+#include "tree_test.h"
 
 
 #pragma comment(lib, "BlockStore.lib")
-
-
-int main() {
-	test();
-}
