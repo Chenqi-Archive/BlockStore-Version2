@@ -1,5 +1,6 @@
 #include "BlockStore/file_manager.h"
 #include "BlockStore/block_loader.h"
+#include "BlockStore/block_saver.h"
 
 #include <iostream>
 
@@ -18,7 +19,7 @@ constexpr auto layout(layout_type<TreeNode>) { return declare(&TreeNode::text, &
 using Root = BlockRef<TreeNode>;
 
 
-void PrintNode(TreeNode& node, uint depth) {
+void PrintNode(const TreeNode& node, uint depth) {
 	static constexpr uint max_depth = 127;
 	static const std::string tab_padding(max_depth, '\t');
 	static const std::string_view tab_padding_view = tab_padding;
@@ -26,32 +27,53 @@ void PrintNode(TreeNode& node, uint depth) {
 
 	std::cout << indent(depth) << node.text << std::endl;
 	for (auto& node_ref : node.child_list) {
-		PrintNode(*node_ref, depth + 1);
+		auto node = node_ref.Load();
+		PrintNode(*node, depth + 1);
 	}
 }
 
 void PrintTree(Root& root) {
-	PrintNode(*root, 0);
+	auto node = root.Load();
+	PrintNode(*node, 0);
 }
 
 
 void BuildTree(Root& root) {
-	TreeNode& node = *root;
-	node.text = "some test string";
-	node.child_list.resize(15);
+	auto node = root.Create();
+	node->text = "root block";
+	node->child_list.resize(5);
 	size_t child_index = 0;
-	for (auto& child : node.child_list) {
-		(*child).text = "child " + std::to_string(child_index);
+	for (auto& child_ref : node->child_list) {
+		auto child_node = child_ref.Create();
+		child_node->text = "child " + std::to_string(child_index++);
+		child_node->child_list.resize(child_index);
+		size_t child_index = 0;
+		for (auto& child_ref : child_node->child_list) {
+			auto child_node = child_ref.Create();
+			child_node->text = "grand child " + std::to_string(child_index++);
+		}
 	}
 }
 
 
 int main() {
+	FileManager file;
+	try {
+		file.Open(L"R:\\test.dat");
+	} catch (std::runtime_error&) {
+		return 0;
+	}
+
 	Root root;
-	BuildTree(root);
-	FileManager file(L"R:\\test.dat");
+	try {
+		root = file.AsBlockLoader().LoadRootBlock<Root>();
+		PrintTree(root);
+	} catch (std::runtime_error&) {
+		file.Format();
+		BuildTree(root);
+		file.AsBlockSaver().SaveRootBlock(root);
+		block_allocator.ClearAll();
+	}
 
-
-	Root root(file, 0);
-	PrintTree(root);
+	file.Close();
 }

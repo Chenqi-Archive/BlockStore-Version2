@@ -1,18 +1,13 @@
 #pragma once
 
 #include "block_ref.h"
-
-#include <string>
-#include <vector>
-#include <array>
-#include <list>
-#include <variant>
+#include "stl_helper.h"
 
 
 BEGIN_NAMESPACE(BlockStore)
 
 
-class BlockLoader : public BlockManager {
+class BlockLoader : public FileManager {
 private:
 	template<class T>
 	void Copy(const char*& data, T& value, std::enable_if_t<is_memcpy_initializable<T>, int> = 0) {
@@ -100,23 +95,32 @@ private:
 private:
 	template<class T>
 	void Load(size_t& index, BlockRef<T>& block_ref) {
-		block_ref = BlockRef<T>(*this, Load<size_t>(index));
+		size_t block_index = Load<size_t>(index);
+		if (block_index == block_index_invalid) { throw std::runtime_error("invalid block index"); }
+		block_ref = BlockRef<T>(*this, block_index);
 	}
 private:
-	template<class T> T Load(size_t& index) { T t; Load(index, t); return t; }
+	template<class T>
+	T Load(size_t& index) {
+		T t; Load(index, t); return t;
+	}
 public:
-	template<class T> T LoadBlock(size_t index) { return Load<T>(index); }
-	template<class T> T LoadRootBlock() { return LoadBlock<T>(0); }
+	template<class T>
+	T LoadBlock(size_t index) {
+		size_t offset = index; size_t block_size = Load<size_t>(index);
+		T block = Load<T>(index); if (offset + block_size != index) { throw std::runtime_error("block"); }
+	}
+	template<class T, class = std::enable_if_t<block_size<T> != block_size_dynamic>>
+	T LoadRootBlock() { return LoadBlock<T>(0); }
 };
 
 
+BlockLoader& FileManager::AsBlockLoader() { return static_cast<BlockLoader&>(*this); }
+
+
 template<class T>
-inline void BlockRef<T>::Load() {
-	if (resource == nullptr) {
-		resource = manager == nullptr ?
-			std::make_unique<T>() :
-			std::make_unique<T>(static_cast<BlockLoader&>(*manager).LoadBlock<T>(index));
-	}
+inline std::shared_ptr<T> BlockRef<T>::LoadBlock() {
+	return std::make_shared<T>(manager->AsBlockLoader().LoadBlock<T>(index));
 }
 
 

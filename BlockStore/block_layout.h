@@ -6,6 +6,15 @@
 BEGIN_NAMESPACE(BlockStore)
 
 
+constexpr size_t block_alignment = sizeof(size_t);
+
+static_assert(block_alignment == 4 || block_alignment == 8);
+
+constexpr size_t next_offset(size_t offset, size_t size) {
+	return ((offset + size) + (block_alignment - 1)) & ~(block_alignment - 1);
+}
+
+
 struct memcpy_initializable_t {};
 constexpr memcpy_initializable_t memcpy_initializable = {};
 
@@ -46,9 +55,9 @@ struct block_size_t<T, std::enable_if_t<is_memcpy_initializable<T>>> {
 template<class T, class... Ts>
 struct block_size_t<std::tuple<T, Ts...>> {
 	static constexpr size_t calculate_size() {
-		constexpr size_t size_first = block_size_t<T>::value;
+		size_t size_first = block_size_t<T>::value;
 		if (size_first == block_size_dynamic) { return block_size_dynamic; }
-		constexpr size_t size_rest = block_size_t<std::tuple<Ts...>>::value;
+		size_t size_rest = block_size_t<std::tuple<Ts...>>::value;
 		if (size_rest == block_size_dynamic) { return block_size_dynamic; }
 		return size_first + size_rest;
 	}
