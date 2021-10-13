@@ -27,14 +27,19 @@
     <ClInclude Include="block_ref.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="FileManager.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="block_size.h">
+    <ClInclude Include="file_manager.h">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="block_loader.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="block_storer.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="file_manager.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
 </Project>

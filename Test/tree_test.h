@@ -1,8 +1,6 @@
-#include "BlockStore/FileManager.h"
-#include "BlockStore/block_ref.h"
+#include "BlockStore/file_manager.h"
+#include "BlockStore/block_loader.h"
 
-#include <string>
-#include <vector>
 #include <iostream>
 
 
@@ -14,21 +12,10 @@ struct TreeNode {
 	std::vector<BlockRef<TreeNode>> child_list;
 };
 
+constexpr auto layout(layout_type<TreeNode>) { return declare(&TreeNode::text, &TreeNode::child_list); }
+
 
 using Root = BlockRef<TreeNode>;
-
-
-BEGIN_NAMESPACE(BlockStore)
-
-template<> 
-constexpr auto layout<TreeNode>() {
-	return declare(
-		&TreeNode::text,
-		&TreeNode::child_list
-	);
-}
-
-END_NAMESPACE(BlockStore)
 
 
 void PrintNode(TreeNode& node, uint depth) {
@@ -43,10 +30,28 @@ void PrintNode(TreeNode& node, uint depth) {
 	}
 }
 
+void PrintTree(Root& root) {
+	PrintNode(*root, 0);
+}
+
+
+void BuildTree(Root& root) {
+	TreeNode& node = *root;
+	node.text = "some test string";
+	node.child_list.resize(15);
+	size_t child_index = 0;
+	for (auto& child : node.child_list) {
+		(*child).text = "child " + std::to_string(child_index);
+	}
+}
+
 
 int main() {
-	BlockManagerFile file(L"");
-	Root root = file.LoadRoot<Root>();
-	TreeNode& root_node = *root;
-	PrintNode(root_node, 0);
+	Root root;
+	BuildTree(root);
+	FileManager file(L"R:\\test.dat");
+
+
+	Root root(file, 0);
+	PrintTree(root);
 }

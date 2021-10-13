@@ -8,7 +8,8 @@ BEGIN_NAMESPACE(BlockStore)
 
 class BlockManager {
 	friend class BlockLoader;
-	virtual const void* Read(size_t index, size_t length) pure;
+	virtual const char* Read(size_t index, size_t length) pure;
+	virtual char* Write(size_t index, size_t length) pure;
 };
 
 

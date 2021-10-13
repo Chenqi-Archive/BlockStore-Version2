@@ -159,9 +159,12 @@
     <ClInclude Include="block_manager.h" />
     <ClInclude Include="block_ref.h" />
     <ClInclude Include="block_layout.h" />
-    <ClInclude Include="block_size.h" />
+    <ClInclude Include="block_storer.h" />
     <ClInclude Include="core.h" />
-    <ClInclude Include="FileManager.h" />
+    <ClInclude Include="file_manager.h" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="file_manager.cpp" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
