@@ -6,9 +6,11 @@
 BEGIN_NAMESPACE(BlockStore)
 
 
+constexpr size_t block_index_invalid = -1;
+
+
 struct MetaInfo {
-	size_t file_size;
-	size_t free_block_list_head;
+	size_t root_index = block_index_invalid;
 };
 
 

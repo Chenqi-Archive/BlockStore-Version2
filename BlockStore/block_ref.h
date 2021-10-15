@@ -1,7 +1,7 @@
 #pragma once
 
 #include "file_manager.h"
-#include "block_allocator.h"
+#include "block_manager.h"
 #include "block_layout.h"
 
 #include <memory>
@@ -10,61 +10,59 @@
 BEGIN_NAMESPACE(BlockStore)
 
 
-constexpr size_t block_index_invalid = -1;
-
-
 template<class T>
 class BlockPtr : public std::shared_ptr<T> {
 private:
-	ref_ptr<FileManager> manager;
+	FileManager& manager;
 	size_t index;
 public:
-	BlockPtr(std::shared_ptr<T> ptr) : std::shared_ptr<T>(ptr), manager(nullptr), index(block_index_invalid) {}
-	BlockPtr(std::shared_ptr<T> ptr, FileManager& manager, size_t index) : std::shared_ptr<T>(ptr), manager(&manager), index(index) {}
-	~BlockPtr() { if (manager != nullptr) { manager->CheckBlockPtr(index); } }
+	BlockPtr(std::shared_ptr<T> ptr, FileManager& manager, size_t index) : std::shared_ptr<T>(ptr), manager(manager), index(index) {}
+	~BlockPtr() { manager->CheckBlockPtr(index); }
 };
 
 
 template<class T>
 class BlockRef {
 private:
-	ref_ptr<FileManager> manager = nullptr;
-	size_t index = block_index_invalid;
-public:
-	BlockRef() {}
-	BlockRef(FileManager& manager, size_t index) : manager(&manager), index(index) {}
-	~BlockRef() { if (HasAllocatedBlock()) { block_allocator.DerefBlock(index); } }
+	friend class BlockLoader;
+	friend class BlockSaver;
 private:
-	bool HasAllocatedBlock() const { return manager == nullptr && index != block_index_invalid; }
-private:
-	std::shared_ptr<T> LoadBlock();  // defined in block_loader.h
+	ref_ptr<FileManager> manager;
+	size_t index;
 public:
-	BlockPtr<const T> Load() const {
-		if (manager == nullptr) { return Create(); }
-		if (manager->HasBlockPtr(index)) {
-			return BlockPtr<T>(std::static_pointer_cast<const T>(manager->GetBlockPtr(index)), *manager, index);
-		} else {
-			std::shared_ptr<const T> block_ptr = LoadBlock(); manager->SetBlockPtr(index, block_ptr);
-			return BlockPtr<T>(block_ptr, *manager, index);
-		}
+	BlockRef() : manager(nullptr), index(block_index_invalid) {}
+	BlockRef(FileManager& manager) : manager(&manager), index(block_index_invalid) {}
+	BlockRef(const BlockRef& block_ref) { *this = block_ref; }
+	~BlockRef() { if (IsCreated()) { block_allocator.DecRefBlock(index); } }
+public:
+	void operator=(const BlockRef& block_ref) {
+		manager = block_ref.manager; index = block_ref.index;
+		if (IsCreated()) { block_allocator.IncRefBlock(index); }
 	}
-	BlockPtr<T> Create() const {
+	FileManager& AsParent() const { return *manager; }
+private:
+	bool IsRaw() const { return manager == nullptr && index == block_index_invalid; }
+	bool IsNew() const { return manager != nullptr && index == block_index_invalid; }
+	bool IsLoaded() const { return manager != nullptr && index != block_index_invalid; }
+private:
+	BlockPtr<T> LoadBlock() const;
+public:
+	BlockPtr<const T> Load() const { return LoadBlock(); }
+	std::shared_ptr<T> Create() const {
 		if (manager != nullptr) {
 			std::shared_ptr<T> block_ptr = LoadBlock();
 			index = block_allocator.AddBlock(block_ptr); manager = nullptr;
-			return BlockPtr<T>(block_ptr);
+			return block_ptr;
 		} else {
-			if (index == block_index_invalid) { 
+			if (index == block_index_invalid) {
 				std::shared_ptr<T> block_ptr = std::make_shared<T>();
 				index = block_allocator.AddBlock(block_ptr);
-				return BlockPtr<T>(block_ptr);
+				return block_ptr;
 			} else {
-				return BlockPtr<T>(std::static_pointer_cast<T>(block_allocator.GetBlock(index)));
+				return std::static_pointer_cast<T>(block_allocator.GetBlock(index));
 			}
 		}
 	}
-private:
-	void Save(const T& value);
 public:
 	static constexpr auto _layout() { return declare(&BlockRef::index); }
 };

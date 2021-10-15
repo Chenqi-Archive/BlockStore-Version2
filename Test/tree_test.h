@@ -15,8 +15,7 @@ struct TreeNode {
 
 constexpr auto layout(layout_type<TreeNode>) { return declare(&TreeNode::text, &TreeNode::child_list); }
 
-
-using Root = BlockRef<TreeNode>;
+using RootRef = BlockRef<TreeNode>;
 
 
 void PrintNode(const TreeNode& node, uint depth) {
@@ -32,21 +31,21 @@ void PrintNode(const TreeNode& node, uint depth) {
 	}
 }
 
-void PrintTree(Root& root) {
+void PrintTree(RootRef& root) {
 	auto node = root.Load();
 	PrintNode(*node, 0);
 }
 
 
-void BuildTree(Root& root) {
+void BuildTree(RootRef& root) {
 	auto node = root.Create();
 	node->text = "root block";
-	node->child_list.resize(5);
+	node->child_list.resize(5, root.AsParent());
 	size_t child_index = 0;
 	for (auto& child_ref : node->child_list) {
 		auto child_node = child_ref.Create();
 		child_node->text = "child " + std::to_string(child_index++);
-		child_node->child_list.resize(child_index);
+		child_node->child_list.resize(child_index, child_ref.AsParent());
 		size_t child_index = 0;
 		for (auto& child_ref : child_node->child_list) {
 			auto child_node = child_ref.Create();
@@ -64,15 +63,14 @@ int main() {
 		return 0;
 	}
 
-	Root root;
+	RootRef root;
 	try {
-		root = file.AsBlockLoader().LoadRootBlock<Root>();
+		file.AsBlockLoader().LoadRootRef(root);
 		PrintTree(root);
 	} catch (std::runtime_error&) {
 		file.Format();
 		BuildTree(root);
-		file.AsBlockSaver().SaveRootBlock(root);
-		block_allocator.ClearAll();
+		file.AsBlockSaver().SaveRootRef(root);
 	}
 
 	file.Close();

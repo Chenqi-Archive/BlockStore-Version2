@@ -92,35 +92,26 @@ private:
 private:
 	template<class T>
 	void Save(size_t& index, const BlockRef<T>& block_ref) {
-		if(block_ref.manager)
-
-
-		block_ref = BlockRef<T>(*this, Save<size_t>(index));
-
-
+		if (block_ref.IsLoaded()) { return; }
+		block_ref = block_ref = BlockRef<T>(*this, SaveBlock(*block_ref.Create()));
 	}
 private:
 	template<class T>
 	size_t Save(const T& block) {
 		size_t index = GetEndOffset(), offset = index; Save(offset, block); return index;
 	}
-public:
+private:
 	template<class T> size_t SaveBlock(const T& block) { return Save(block); }
-	template<class T> size_t SaveRootBlock(const T& root) { return SaveBlock(root); }
+public:
+	template<class T>
+	size_t SaveRootRef(const BlockRef<T>& root) {
+		
+		return SaveBlock(root); 
+	}
 };
 
 
 BlockSaver& FileManager::AsBlockSaver() { return static_cast<BlockSaver&>(*this); }
-
-
-template<class T>
-inline void BlockRef<T>::Save() {
-	if (resource == nullptr) {
-		resource = manager == nullptr ?
-			std::make_unique<T>() :
-			std::make_unique<T>(static_cast<BlockStoreer&>(*manager).StoreBlock<T>(index));
-	}
-}
 
 
 END_NAMESPACE(BlockStore)

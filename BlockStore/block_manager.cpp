@@ -35,6 +35,14 @@ void DeallocateBlockEntry(size_t index) {
 }
 
 
+struct BlockSaveInfo {
+	ref_ptr<FileManager> manager;
+	size_t index;
+};
+
+std::vector<BlockSaveInfo> block_save_info;
+
+
 END_NAMESPACE(Anonymous)
 
 
@@ -48,8 +56,19 @@ std::shared_ptr<void> BlockAllocator::GetBlock(size_t index) {
 	return block_cache[index].block_data;
 }
 
-void BlockAllocator::DerefBlock(size_t index) {
+void BlockAllocator::IncRefBlock(size_t index) {
+	++block_cache[index].ref_count;
+}
+
+void BlockAllocator::DecRefBlock(size_t index) {
 	if (--block_cache[index].ref_count == 0) { DeallocateBlockEntry(index); }
+}
+
+void BlockAllocator::SaveBlock(size_t index, FileManager& manager, size_t block_index) {
+}
+
+size_t BlockAllocator::IsBlockSaved(size_t index, FileManager& manager) {
+	return size_t();
 }
 
 void BlockAllocator::ClearAll() {

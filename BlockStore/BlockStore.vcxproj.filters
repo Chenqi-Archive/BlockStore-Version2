@@ -39,12 +39,12 @@
     <ClInclude Include="meta_info.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="block_allocator.h">
+    <ClInclude Include="block_manager.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="block_allocator.cpp">
+    <ClCompile Include="block_manager.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="file_manager.cpp">
