@@ -159,14 +159,13 @@
     <ClInclude Include="block_loader.h" />
     <ClInclude Include="block_ref.h" />
     <ClInclude Include="block_layout.h" />
-    <ClInclude Include="block_saver.h" />
     <ClInclude Include="core.h" />
     <ClInclude Include="file_manager.h" />
     <ClInclude Include="meta_info.h" />
     <ClInclude Include="stl_helper.h" />
+    <ClInclude Include="uncopyable.h" />
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="block_manager.cpp" />
     <ClCompile Include="file_manager.cpp" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />

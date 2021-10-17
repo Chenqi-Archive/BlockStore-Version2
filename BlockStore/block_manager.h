@@ -1,23 +1,38 @@
 #pragma once
 
-#include "core.h"
+#include "meta_info.h"
 
 #include <memory>
 
 
 BEGIN_NAMESPACE(BlockStore)
 
-class FileManager;
+
+class BlockManager {
+public:
+	BlockManager() {}
+
+	// file
+private:
+	size_t GetSize() const {}
+	void SetSize(size_t size) {}
+	void* Lock(size_t offset, size_t length) {}
+
+	// meta
+private:
+	MetaInfo meta_info;
+public:
+	size_t GetRootIndex() { return meta_info.root_index; }
+
+	// block
+private:
+	BlockLoadContext LoadBlock(size_t index) {
+		if (index % 8 != 0) { throw std::invalid_argument(); }
+		Lock(index, )
+	}
 
 
-struct BlockAllocator {
-	size_t AddBlock(std::shared_ptr<void> ptr);
-	std::shared_ptr<void> GetBlock(size_t index);
-	void IncRefBlock(size_t index);
-	void DecRefBlock(size_t index);
-	void SaveBlock(size_t index, FileManager& manager, size_t block_index);
-	size_t IsBlockSaved(size_t index, FileManager& manager);
-	void ClearAll();
+
 };
 
 

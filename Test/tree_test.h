@@ -1,6 +1,7 @@
 #include "BlockStore/file_manager.h"
 #include "BlockStore/block_loader.h"
 #include "BlockStore/block_saver.h"
+#include "BlockStore/stl/vector.h"
 
 #include <iostream>
 

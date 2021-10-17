@@ -1,42 +1,58 @@
 #pragma once
 
-#include "meta_info.h"
-
-#include <memory>
-#include <unordered_map>
+#include "uncopyable.h"
 
 
 BEGIN_NAMESPACE(BlockStore)
 
 
-class FileManager {
+class FileManager : Uncopyable {
 public:
-	FileManager() {}
-	~FileManager() {}
+	enum class CreateMode : uint {  // |  existing	 | not existing	|  
+		CreateNew = 1,				// | 	ERROR	 |	  create	|
+		CreateAlways = 2,			// | 	clear	 |	  create	|
+		OpenExisting = 3,			// | 	open	 |	  ERROR		|
+		OpenAlways = 4,				// | 	open	 |	  create	|
+		TruncateExisting = 5		// | 	clear	 |	  ERROR		|
+	};
+	enum class AccessMode : uint {
+		ReadOnly = 0x80000000L,		// GENERIC_READ
+		ReadWrite = 0xC0000000L,	// GENERIC_READ | GENERIC_WRITE
+	};
+	enum class ShareMode : uint {
+		None = 0x00000000,			// NULL
+		ReadOnly = 0x00000001,		// FILE_SHARE_READ
+		ReadWrite = 0x00000003,		// FILE_SHARE_READ | FILE_SHARE_WRITE
+	};
 public:
-	void Open(std::wstring file) {
-
-	}
-	void Close() {}
-public:
-	void Format() {
-
-	}
+	FileManager(const wchar path[],
+				CreateMode create_mode = CreateMode::OpenAlways,
+				AccessMode access_mode = AccessMode::ReadWrite,
+				ShareMode share_mode = ShareMode::None);
+	~FileManager();
 private:
-	MetaInfo LoadMetaInfo() {}
+	using HANDLE = void*;
+	HANDLE file;
+	uint64 size;
+	CreateMode create_mode;
+	AccessMode access_mode;
+	ShareMode share_mode;
 public:
-	template<class T>
-	void LoadRootRef(BlockRef<T>& root) { root.manager = this; root.index = LoadMetaInfo().root_index; }
-public:
-	std::pair<const char*, size_t> LockBlock(size_t index) const {}
-	void Append(size_t length) {}
+	uint64 GetSize() const { return size; }
+	void SetSize(uint64 size);
 private:
-	std::unordered_map<size_t, std::weak_ptr<const void>> block_cache;
-protected:
-	bool HasBlockPtr(size_t index) { return block_cache.find(index) != block_cache.end(); }
-	void SetBlockPtr(size_t index, std::weak_ptr<const void> weak_ptr) { block_cache.emplace(index, weak_ptr); }
-	std::shared_ptr<const void> GetBlockPtr(size_t index) { return block_cache.at(index).lock(); }
-	void CheckBlockPtr(size_t index) { if (block_cache.at(index).expired()) { block_cache.erase(index); } }
+	HANDLE mapping;
+private:
+	void DoMapping();
+	void UndoMapping();
+private:
+	byte* view_address;
+	uint64 view_offset;
+	uint64 view_length;
+private:
+	void Unlock();
+public:
+	byte* Lock(uint64 offset, uint64 length);
 };
 
 
