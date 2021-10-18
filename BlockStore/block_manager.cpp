@@ -1,78 +1,67 @@
-#include "block_allocator.h"
-
-#include <vector>
+#include "block_manager.h"
+#include "file_manager.h"
+#include "block_cache.h"
 
 
 BEGIN_NAMESPACE(BlockStore)
 
-BEGIN_NAMESPACE(Anonymous)
 
-constexpr size_t block_index_invalid = -1;
+BlockManager::BlockManager(std::unique_ptr<FileManager> file) : file(std::move(file)) { LoadMetaInfo(); }
 
+BlockManager::~BlockManager() {}
 
-struct BlockInfo {
-	union {
-		size_t ref_count;
-		size_t index;
-		size_t next_index = block_index_invalid;
-	};
-	std::shared_ptr<void> block_data;
-};
-
-std::vector<BlockInfo> block_cache;
-
-size_t next_index = block_index_invalid;
-
-
-BlockInfo& AllocateBlockEntry() {
-	if (next_index == block_index_invalid) { next_index = block_cache.size(); block_cache.emplace_back(); }
-	BlockInfo& info = block_cache[next_index]; std::swap(info.index, next_index); return info;
+void BlockManager::LoadMetaInfo() {
+	if (file->GetSize() >= meta_info_size) {
+		byte* data = file->Lock(0, meta_info_size);
+		memcpy(&meta_info, data, meta_info_size);
+	}
 }
 
-void DeallocateBlockEntry(size_t index) {
-	BlockInfo& info = block_cache[index]; info.block_data.reset();
-	info.next_index = next_index; next_index = index;
+void BlockManager::SaveMetaInfo() {
+	meta_info.file_size = file->GetSize();
+	byte* data = file->Lock(0, meta_info_size);
+	memcpy(data, &meta_info, meta_info_size);
 }
 
-
-struct BlockSaveInfo {
-	ref_ptr<FileManager> manager;
-	size_t index;
-};
-
-std::vector<BlockSaveInfo> block_save_info;
-
-
-END_NAMESPACE(Anonymous)
-
-
-size_t BlockAllocator::AddBlock(std::shared_ptr<void> ptr) {
-	BlockInfo& info = AllocateBlockEntry();
-	size_t index = info.index; info.block_data = ptr; info.ref_count = 1;
-	return info.index;
+void BlockManager::Format() {
+	file->SetSize(meta_info_size);
+	meta_info.root_index = block_index_invalid;
+	SaveMetaInfo();
 }
 
-std::shared_ptr<void> BlockAllocator::GetBlock(size_t index) {
-	return block_cache[index].block_data;
+bool BlockManager::IsBlockCached(data_t index) { return cache->IsBlockCached(index); }
+void BlockManager::SetBlock(data_t index, std::weak_ptr<void> weak_ptr) { return cache->SetBlock(index, weak_ptr); }
+std::shared_ptr<void> BlockManager::GetBlock(data_t index) { return cache->GetBlock(index); }
+void BlockManager::CheckBlock(data_t index) { if (is_const_block_index(index)) { return cache->CheckBlock(index); } }
+
+data_t BlockManager::AddNewBlock(std::shared_ptr<void> ptr) { return convert_new_block_index_from_cache(cache->AddNewBlock(ptr)); }
+std::shared_ptr<void> BlockManager::GetNewBlock(data_t index) { return cache->GetNewBlock(convert_new_block_index_to_cache(index)); }
+void BlockManager::IncRefNewBlock(data_t index) { return cache->IncRefNewBlock(convert_new_block_index_to_cache(index)); }
+void BlockManager::DecRefNewBlock(data_t index) { return cache->DecRefNewBlock(convert_new_block_index_to_cache(index)); }
+bool BlockManager::IsNewBlockSaved(data_t index) { return cache->IsNewBlockSaved(convert_new_block_index_to_cache(index)); }
+void BlockManager::SaveNewBlock(data_t index, data_t block_index) { return cache->SaveNewBlock(convert_new_block_index_to_cache(index), block_index); }
+data_t BlockManager::GetSavedBlockIndex(data_t index) {	return cache->GetSavedBlockIndex(convert_new_block_index_to_cache(index));}
+void BlockManager::ClearNewBlock() { return cache->ClearNewBlock(); }
+
+BlockLoadContext BlockManager::LoadBlockContext(data_t index) {
+	if (!is_const_block_index(index)) { throw std::invalid_argument("invalid block index"); }
+	byte* data_length = file->Lock(index, sizeof(data_t));
+	data_t length; memcpy(&length, data_length, sizeof(data_t));
+	byte* data_block = file->Lock(index + sizeof(data_t), length);
+	return BlockLoadContext(*this, data_block, length);
 }
 
-void BlockAllocator::IncRefBlock(size_t index) {
-	++block_cache[index].ref_count;
+data_t BlockManager::AllocateBlock(data_t size) {
+	data_t offset = file->GetSize();
+	file->SetSize(offset + size);
+	return offset;
 }
 
-void BlockAllocator::DecRefBlock(size_t index) {
-	if (--block_cache[index].ref_count == 0) { DeallocateBlockEntry(index); }
-}
-
-void BlockAllocator::SaveBlock(size_t index, FileManager& manager, size_t block_index) {
-}
-
-size_t BlockAllocator::IsBlockSaved(size_t index, FileManager& manager) {
-	return size_t();
-}
-
-void BlockAllocator::ClearAll() {
-	block_cache.clear(); next_index = block_index_invalid;
+BlockSaveContext BlockManager::SaveBlockContext(data_t index, data_t size) {
+	if (!is_const_block_index(index)) { throw std::invalid_argument("invalid block index"); }
+	byte* data_block = file->Lock(index, sizeof(data_t) + size);
+	memcpy(data_block, &size, sizeof(data_t));
+	return BlockSaveContext(*this, data_block + sizeof(data_t), size);
 }
 
 

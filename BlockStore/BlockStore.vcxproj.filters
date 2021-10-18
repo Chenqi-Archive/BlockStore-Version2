@@ -27,9 +27,6 @@
     <ClInclude Include="block_ref.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="block_loader.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
     <ClInclude Include="stl_helper.h">
       <Filter>Header Files</Filter>
     </ClInclude>
@@ -42,9 +39,21 @@
     <ClInclude Include="uncopyable.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="block_context.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="block_traits.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="block_cache.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="file_manager.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="block_manager.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>

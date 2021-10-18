@@ -5,13 +5,15 @@
 
 BEGIN_NAMESPACE(BlockStore)
 
-
-constexpr size_t block_index_invalid = -1;
+constexpr data_t block_index_invalid = -1;
 
 
 struct MetaInfo {
-	size_t root_index = block_index_invalid;
+	data_t file_size = 0;
+	data_t root_index = block_index_invalid;
 };
+
+constexpr data_t meta_info_size = sizeof(MetaInfo);
 
 
 END_NAMESPACE(BlockStore)

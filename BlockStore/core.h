@@ -25,5 +25,7 @@ using uint64 = unsigned long long;
 using wchar = wchar_t;
 using byte = std::byte;
 
+using data_t = uint64;
+
 
 END_NAMESPACE(BlockStore)

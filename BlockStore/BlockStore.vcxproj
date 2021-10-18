@@ -155,10 +155,12 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClInclude Include="block_cache.h" />
+    <ClInclude Include="block_context.h" />
     <ClInclude Include="block_manager.h" />
-    <ClInclude Include="block_loader.h" />
     <ClInclude Include="block_ref.h" />
     <ClInclude Include="block_layout.h" />
+    <ClInclude Include="block_traits.h" />
     <ClInclude Include="core.h" />
     <ClInclude Include="file_manager.h" />
     <ClInclude Include="meta_info.h" />
@@ -166,6 +168,7 @@
     <ClInclude Include="uncopyable.h" />
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="block_manager.cpp" />
     <ClCompile Include="file_manager.cpp" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
