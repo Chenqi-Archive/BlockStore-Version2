@@ -8,6 +8,19 @@ BEGIN_NAMESPACE(BlockStore)
 class BlockManager;
 
 
+struct BlockSizeContext {
+private:
+	data_t size;
+public:
+	BlockSizeContext() : size(0) {}
+public:
+	template<class T> void add(const T&) { align_offset<T>(size); size += sizeof(T); }
+	template<class T> void add(T object[], data_t count) { align_offset<T>(size); size += sizeof(T) * count; }
+public:
+	data_t GetSize() const { return size; }
+};
+
+
 struct BlockLoadContext {
 private:
 	BlockManager& manager;
@@ -36,12 +49,15 @@ public:
 
 struct BlockSaveContext {
 private:
+	friend class BlockManager;
+private:
 	BlockManager& manager;
-	byte* const data;
+	data_t index;
+	byte* data;
 	const data_t length;
 	data_t offset;
 public:
-	BlockSaveContext(BlockManager& manager, byte* data, data_t length) : manager(manager), data(data), length(length), offset(0) {}
+	BlockSaveContext(BlockManager& manager, data_t index, byte* data, data_t length) : manager(manager), index(index), data(data), length(length), offset(0) {}
 private:
 	void CheckNextOffset(data_t offset) { if (offset > length) { throw std::runtime_error("block size mismatch"); } }
 public:

@@ -62,8 +62,8 @@ int main() {
 	RootRef root; manager.LoadRootRef(root);
 	try {
 		PrintTree(root);
-	} catch (std::runtime_error&) {
-		manager.Format();
+	} catch (std::exception&) {
+		manager.Format(); manager.LoadRootRef(root);
 		BuildTree(root);
 		manager.SaveRootRef(root);
 	}

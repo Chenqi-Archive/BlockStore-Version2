@@ -6,7 +6,7 @@
 BEGIN_NAMESPACE(BlockStore)
 
 
-BlockManager::BlockManager(std::unique_ptr<FileManager> file) : file(std::move(file)) { LoadMetaInfo(); }
+BlockManager::BlockManager(std::unique_ptr<FileManager> file) : file(std::move(file)), cache(new BlockCache) { LoadMetaInfo(); }
 
 BlockManager::~BlockManager() {}
 
@@ -53,7 +53,7 @@ BlockLoadContext BlockManager::LoadBlockContext(data_t index) {
 
 data_t BlockManager::AllocateBlock(data_t size) {
 	data_t offset = file->GetSize();
-	file->SetSize(offset + size);
+	file->SetSize(offset + sizeof(data_t) + size);
 	return offset;
 }
 
@@ -61,7 +61,12 @@ BlockSaveContext BlockManager::SaveBlockContext(data_t index, data_t size) {
 	if (!is_const_block_index(index)) { throw std::invalid_argument("invalid block index"); }
 	byte* data_block = file->Lock(index, sizeof(data_t) + size);
 	memcpy(data_block, &size, sizeof(data_t));
-	return BlockSaveContext(*this, data_block + sizeof(data_t), size);
+	return BlockSaveContext(*this, index, data_block + sizeof(data_t), size);
+}
+
+void BlockManager::RenewSaveContext(BlockSaveContext& context) {
+	byte* data_block = file->Lock(context.index + sizeof(data_t), context.length);
+	context.data = data_block;
 }
 
 

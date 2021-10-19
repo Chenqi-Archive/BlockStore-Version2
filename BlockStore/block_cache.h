@@ -43,7 +43,9 @@ private:
 		info.next_index = next_index; next_index = index;
 	}
 private:
-
+	void VerifyIndex(data_t index) {
+		if (index >= new_block_cache.size()) { throw std::runtime_error("invalid new block index"); }
+	}
 public:
 	data_t AddNewBlock(std::shared_ptr<void> ptr) {
 		BlockInfo& info = AllocateBlockEntry();
@@ -51,22 +53,28 @@ public:
 		return index;
 	}
 	std::shared_ptr<void> GetNewBlock(data_t index) {
+		VerifyIndex(index);
 		return new_block_cache[index].block_data;
 	}
 	void IncRefNewBlock(data_t index) {
+		VerifyIndex(index);
 		++new_block_cache[index].ref_count;
 	}
 	void DecRefNewBlock(data_t index) {
+		VerifyIndex(index);
 		if (--new_block_cache[index].ref_count == 0) { DeallocateBlockEntry(index); }
 	}
 	bool IsNewBlockSaved(data_t index) {
+		VerifyIndex(index);
 		return new_block_cache[index].block_data == nullptr;
 	}
 	void SaveNewBlock(data_t index, data_t block_index) {
+		VerifyIndex(index);
 		new_block_cache[index].const_block_index = block_index;
 		new_block_cache[index].block_data.reset();
 	}
 	data_t GetSavedBlockIndex(data_t index) {
+		VerifyIndex(index);
 		return new_block_cache[index].const_block_index;
 	}
 	void ClearNewBlock() {

@@ -8,20 +8,20 @@ BEGIN_NAMESPACE(BlockStore)
 
 template<class T, class = void>
 struct layout_traits {
-	static_assert(false, "block layout undefined");
-	static data_t CalculateSize(const T& object) { return 0; }
+	static_assert((T(), false), "block layout undefined");
+	static void Size(BlockSizeContext& context, const T& object) {}
 	static void Load(BlockLoadContext& context, T& object) {}
 	static void Save(BlockSaveContext& context, const T& object) {}
 };
 
-template<class T> data_t CalculateSize(const T& object) { return layout_traits<T>::CalculateSize(object); }
+template<class T> void Size(BlockSizeContext& context, const T& object) { layout_traits<T>::Size(context, object); }
 template<class T> void Load(BlockLoadContext& context, T& object) { layout_traits<T>::Load(context, object); }
-template<class T> void Save(BlockLoadContext& context, const T& object) { layout_traits<T>::Save(context, object); }
+template<class T> void Save(BlockSaveContext& context, const T& object) { layout_traits<T>::Save(context, object); }
 
 
 template<class T>
 struct layout_traits<T, std::enable_if_t<has_trivial_layout<T>>> {
-	static data_t CalculateSize(const T& object) { return sizeof(T); }
+	static void Size(BlockSizeContext& context, const T& object) { context.add(object); }
 	static void Load(BlockLoadContext& context, T& object) { context.read(object); }
 	static void Save(BlockSaveContext& context, const T& object) { context.write(object); }
 };
@@ -29,8 +29,8 @@ struct layout_traits<T, std::enable_if_t<has_trivial_layout<T>>> {
 
 template<class T>
 struct layout_traits<T, std::enable_if_t<has_custom_layout<T>>> {
-	static data_t CalculateSize(const T& object) {
-		return std::apply([&](auto... member) { return (BlockStore::CalculateSize(object.*member) + ...); }, layout(layout_type<T>()));
+	static void Size(BlockSizeContext& context, const T& object) {
+		std::apply([&](auto... member) { (BlockStore::Size(context, object.*member), ...); }, layout(layout_type<T>()));
 	}
 	static void Load(BlockLoadContext& context, T& object) {
 		std::apply([&](auto... member) { (BlockStore::Load(context, object.*member), ...); }, layout(layout_type<T>()));
@@ -43,8 +43,8 @@ struct layout_traits<T, std::enable_if_t<has_custom_layout<T>>> {
 
 template<class T1, class T2>
 struct layout_traits<std::pair<T1, T2>> {
-	static constexpr data_t CalculateSize(const std::pair<T1, T2>& object) {
-		return BlockStore::CalculateSize(object.first) + BlockStore::CalculateSize(object.second);
+	static void Size(BlockSizeContext& context, const std::pair<T1, T2>& object) {
+		BlockStore::Size(context, object.first); BlockStore::Size(context, object.second);
 	}
 	static void Load(BlockLoadContext& context, std::pair<T1, T2>& object) {
 		BlockStore::Load(context, object.first); BlockStore::Load(context, object.second);
@@ -57,8 +57,8 @@ struct layout_traits<std::pair<T1, T2>> {
 
 template<class... Ts>
 struct layout_traits<std::tuple<Ts...>> {
-	static constexpr data_t CalculateSize(const std::tuple<Ts...>& object) {
-		return std::apply([&](auto&... member) { return (BlockStore::CalculateSize(member) + ...); }, object);
+	static void Size(BlockSizeContext& context, const std::tuple<Ts...>& object) {
+		std::apply([&](auto&... member) { (BlockStore::Size(context, member), ...); }, object);
 	}
 	static void Load(BlockLoadContext& context, std::tuple<Ts...>& object) {
 		std::apply([&](auto&... member) { (BlockStore::Load(context, member), ...); }, object);

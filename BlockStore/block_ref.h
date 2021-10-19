@@ -20,8 +20,8 @@ public:
 		std::shared_ptr<const T>(ptr), manager(manager), index(index) {}
 	~BlockPtr();
 public:
-	operator const T& () const { return *get(); }
-	operator const T* () const { return get(); }
+	operator const T& () const { return *this->get(); }
+	operator const T* () const { return this->get(); }
 };
 
 
@@ -33,16 +33,20 @@ private:
 public:
 	BlockRef() : manager(nullptr), index(block_index_invalid) {}
 	BlockRef(BlockManager& manager) : manager(&manager), index(block_index_invalid) {}
-	BlockRef(const BlockRef<T>& block_ref) { *this = block_ref; }
+	BlockRef(BlockRef&& block_ref) : manager(block_ref.manager), index(block_ref.index) { block_ref.manager = nullptr; block_ref.index = block_index_invalid; }
+	BlockRef(const BlockRef& block_ref);
 	~BlockRef();
 public:
-	BlockRef& operator=(const BlockRef& block_ref);
+	void swap(BlockRef& block_ref) { std::swap(manager, block_ref.manager); std::swap(index, block_ref.index); }
+public:
+	BlockRef& operator=(const BlockRef& block_ref) { BlockRef temp(block_ref); swap(temp); return *this; }
 	BlockManager& GetManager() const { return *manager; }
 public:
 	BlockPtr<T> Read() const;
 	T& Write() const;
 private:
-	friend struct layout_traits<BlockRef<T>>;
+	friend class BlockManager;
+	friend struct layout_traits<BlockRef>;
 };
 
 

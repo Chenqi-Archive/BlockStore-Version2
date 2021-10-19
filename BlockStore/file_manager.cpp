@@ -44,7 +44,7 @@ FileManager::FileManager(const wchar path[], CreateMode create_mode, AccessMode 
 	file = CreateFileW(path, (DWORD)access_mode, (DWORD)share_mode, NULL, (DWORD)create_mode, FILE_ATTRIBUTE_NORMAL, NULL);
 	if (file == INVALID_HANDLE_VALUE) { throw std::invalid_argument("create file error"); }
 	if (GetFileSizeEx(file, (PLARGE_INTEGER)&size) != TRUE) { throw std::runtime_error("get file size error"); }
-	if (size > 0) { DoMapping(); }
+	DoMapping();
 }
 
 FileManager::~FileManager() {
@@ -63,6 +63,7 @@ void FileManager::SetSize(uint64 size) {
 }
 
 void FileManager::DoMapping() {
+	if (size == 0) { return; }
 	mapping = CreateFileMappingW(file, NULL, access_mode == AccessMode::ReadOnly ? PAGE_READONLY : PAGE_READWRITE, 0, 0, NULL);
 	if (mapping == NULL) { throw std::runtime_error("create file mapping error"); }
 }

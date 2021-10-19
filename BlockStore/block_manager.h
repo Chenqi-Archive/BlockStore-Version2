@@ -35,7 +35,7 @@ private:
 	std::unique_ptr<BlockCache> cache;
 private:
 	static bool is_const_block_index(data_t index) { return index % sizeof(data_t) == 0; }
-	static bool is_new_block_index(data_t index) { return index & 1 != 0; }
+	static bool is_new_block_index(data_t index) { return (index & 1) != 0; }
 private:
 	bool IsBlockCached(data_t index);
 	void SetBlock(data_t index, std::weak_ptr<void> weak_ptr);
@@ -62,12 +62,12 @@ private:
 	};
 	template<class T>
 	static std::shared_ptr<T> pointer_cast(const std::shared_ptr<void>& ptr) {
-		if (std::get_deleter<deleter<T>>(ptr) == nullptr) { throw std::invalid_argument("pointer type mismatch"); }
+		if (std::get_deleter<deleter<T>>(ptr) == nullptr) { throw std::runtime_error("pointer type mismatch"); }
 		return std::static_pointer_cast<T>(ptr);
 	}
 	template<class T>
 	static std::shared_ptr<T> pointer_cast(std::shared_ptr<void>&& ptr) {
-		if (std::get_deleter<deleter<T>>(ptr) == nullptr) { throw std::invalid_argument("pointer type mismatch"); }
+		if (std::get_deleter<deleter<T>>(ptr) == nullptr) { throw std::runtime_error("pointer type mismatch"); }
 		return std::static_pointer_cast<T>(std::move(ptr));
 	}
 
@@ -90,24 +90,33 @@ private:
 private:
 	template<class T>
 	BlockPtr<T> ReadBlock(data_t& index) {
-		if (is_new_block_index(index)) { return BlockPtr<T>(GetNewBlock<T>(index), *this, index); }
-		if (is_const_block_index(index)) { return BlockPtr<T>(LoadBlock<T>(index), *this, index); }
+		if (index != block_index_invalid) {
+			if (is_new_block_index(index)) { return BlockPtr<T>(GetNewBlock<T>(index), *this, index); }
+			if (is_const_block_index(index)) { return BlockPtr<T>(LoadBlock<T>(index), *this, index); }
+		}
 		throw std::runtime_error("invalid block index");
 	}
 public:
 	template<class T>
 	void LoadRootRef(BlockRef<T>& root) {
-		root.manager = this; root.index = meta_info.root_index;
+		root = BlockRef<T>(*this); root.index = meta_info.root_index;
 	}
 
 	// create
 private:
 	template<class T>
 	std::shared_ptr<T> CreateNewBlock(data_t& index) {
+		std::shared_ptr<T> block_ptr;
 		if (is_const_block_index(index)) {
-
+			if (IsBlockCached(index)) {
+				BlockPtr<T> block(LoadBlock<T>(index), *this, index);
+				block_ptr.reset(new T(block), deleter<T>());
+			} else {
+				block_ptr = LoadBlock<T>(index);
+			}
+		} else {
+			block_ptr.reset(new T(), deleter<T>());
 		}
-		std::shared_ptr<T> block_ptr(new T(), deleter<T>());
 		index = AddNewBlock(block_ptr);
 		return block_ptr;
 	}
@@ -127,9 +136,10 @@ private:
 private:
 	data_t AllocateBlock(data_t size);
 	BlockSaveContext SaveBlockContext(data_t index, data_t size);
+	void RenewSaveContext(BlockSaveContext& context);
 private:
 	bool CheckNewBlock(data_t& index) {
-		if (is_const_block_index(index)) { return false; }
+		if (index == block_index_invalid || is_const_block_index(index)) { return false; }
 		if (IsNewBlockSaved(index)) { index = GetSavedBlockIndex(index); return false; }
 		return true;
 	}
@@ -138,11 +148,11 @@ private:
 	void SaveBlock(data_t& index) {
 		if (!CheckNewBlock(index)) { return; }
 		std::shared_ptr<T> block = pointer_cast<T>(GetNewBlock(index));
-		data_t size = CalculateSize(block);
-		data_t block_index = AllocateBlock(size);
+		BlockSizeContext size_context; Size(size_context, *block);
+		data_t block_index = AllocateBlock(size_context.GetSize());
 		SaveNewBlock(index, block_index);
 		index = block_index;
-		BlockSaveContext context = SaveBlockContext(block_index, size);
+		BlockSaveContext context = SaveBlockContext(block_index, size_context.GetSize());
 		Save(context, *block);
 	}
 public:
@@ -150,14 +160,14 @@ public:
 	void SaveRootRef(BlockRef<T>& root) {
 		if (root.manager != this) { throw std::invalid_argument("block manager mismatch"); }
 		SaveBlock<T>(root.index);
-		meta_info.root_index = root;
+		meta_info.root_index = root.index;
 		SaveMetaInfo();
 		ClearNewBlock();
 	}
 
 private:
-	template<class> friend struct BlockPtr;
-	template<class> friend struct BlockRef;
+	template<class> friend class BlockPtr;
+	template<class> friend class BlockRef;
 	template<class, class> friend struct layout_traits;
 };
 
@@ -168,39 +178,41 @@ inline BlockPtr<T>::~BlockPtr() {
 }
 
 template<class T>
+inline BlockRef<T>::BlockRef(const BlockRef& block_ref) : manager(block_ref.manager), index(block_ref.index) {
+	if (manager != nullptr && manager->CheckNewBlock(index)) { manager->IncRefNewBlock(index); }
+}
+
+template<class T>
 inline BlockRef<T>::~BlockRef() {
 	if (manager != nullptr && manager->CheckNewBlock(index)) { manager->DecRefNewBlock(index); }
 }
 
 template<class T>
-inline BlockRef<T>& BlockRef<T>::operator=(const BlockRef<T>& block_ref) {
-	manager = block_ref.manager; index = block_ref.index;
-	if (manager != nullptr && manager->CheckNewBlock(index)) { manager->IncRefNewBlock(index); }
-	return *this;
-}
-
-template<class T>
 inline BlockPtr<T> BlockRef<T>::Read() const {
-	if (manager == nullptr) { throw std::logic_error("block ref uninitialized"); }
-	return manager->ReadBlock(index);
+	if (manager == nullptr) { throw std::invalid_argument("block ref uninitialized"); }
+	return manager->ReadBlock<T>(index);
 }
 
 template<class T>
 inline T& BlockRef<T>::Write() const {
-	if (manager == nullptr) { throw std::logic_error("block ref uninitialized"); }
-	return manager->WriteBlock(index);
+	if (manager == nullptr) { throw std::invalid_argument("block ref uninitialized"); }
+	return manager->WriteBlock<T>(index);
 }
 
 
 template<class T>
 struct layout_traits<BlockRef<T>> {
-	static data_t CalculateSize(const BlockRef<T>& object) { return sizeof(data_t); }
+	static void Size(BlockSizeContext& context, const BlockRef<T>& object) {
+		context.add(object.index);
+	}
 	static void Load(BlockLoadContext& context, BlockRef<T>& object) {
-		context.read(object.index); object.manager = &context.GetBlockManager();
+		context.read(object.index);
+		object.manager = &context.GetBlockManager();
 	}
 	static void Save(BlockSaveContext& context, const BlockRef<T>& object) {
 		if (&context.GetBlockManager() != object.manager) { throw std::invalid_argument("block manager mismatch"); }
-		object.manager->SaveBlock(object.index); context.write(object.index);
+		object.manager->SaveBlock<T>(object.index); object.manager->RenewSaveContext(context);
+		context.write(object.index);
 	}
 };
 
