@@ -14,7 +14,7 @@ template<class T>
 class BlockPtr : public std::shared_ptr<const T> {
 private:
 	BlockManager& manager;
-	data_t index;
+	const data_t index;
 public:
 	BlockPtr(std::shared_ptr<const T> ptr, BlockManager& manager, data_t index) :
 		std::shared_ptr<const T>(ptr), manager(manager), index(index) {}
@@ -33,14 +33,18 @@ private:
 public:
 	BlockRef() : manager(nullptr), index(block_index_invalid) {}
 	BlockRef(BlockManager& manager) : manager(&manager), index(block_index_invalid) {}
-	BlockRef(BlockRef&& block_ref) : manager(block_ref.manager), index(block_ref.index) { block_ref.manager = nullptr; block_ref.index = block_index_invalid; }
-	BlockRef(const BlockRef& block_ref);
+	BlockRef(BlockRef&& other) noexcept : manager(other.manager), index(other.index) { other.manager = nullptr; other.index = block_index_invalid; }
+	BlockRef(const BlockRef& other);
 	~BlockRef();
 public:
-	void swap(BlockRef& block_ref) { std::swap(manager, block_ref.manager); std::swap(index, block_ref.index); }
+	void swap(BlockRef& other) { std::swap(manager, other.manager); std::swap(index, other.index); }
+	BlockRef& operator=(BlockRef&& other) noexcept { BlockRef temp(other); swap(temp); return *this; }
+	BlockRef& operator=(const BlockRef& other) { BlockRef temp(other); swap(temp); return *this; }
 public:
-	BlockRef& operator=(const BlockRef& block_ref) { BlockRef temp(block_ref); swap(temp); return *this; }
 	BlockManager& GetManager() const { return *manager; }
+	bool operator==(const BlockRef& other) const { return manager == other.manager && index == other.index; }
+	bool operator!=(const BlockRef& other) const { return !operator==(other); }
+	bool IsEmpty() const { return operator==(BlockRef(GetManager())); }
 public:
 	BlockPtr<T> Read() const;
 	T& Write() const;

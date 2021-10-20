@@ -65,8 +65,7 @@ BlockSaveContext BlockManager::SaveBlockContext(data_t index, data_t size) {
 }
 
 void BlockManager::RenewSaveContext(BlockSaveContext& context) {
-	byte* data_block = file->Lock(context.index + sizeof(data_t), context.length);
-	context.data = data_block;
+	context.data = file->Lock(context.index + sizeof(data_t), context.length);
 }
 
 

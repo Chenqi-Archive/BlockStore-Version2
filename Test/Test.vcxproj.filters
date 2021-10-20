@@ -26,5 +26,11 @@
     <ClInclude Include="file_test.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="ring_test.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="list_test.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
 </Project>

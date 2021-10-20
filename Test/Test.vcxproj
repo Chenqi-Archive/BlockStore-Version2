@@ -163,6 +163,8 @@
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="file_test.h" />
+    <ClInclude Include="list_test.h" />
+    <ClInclude Include="ring_test.h" />
     <ClInclude Include="tree_test.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />

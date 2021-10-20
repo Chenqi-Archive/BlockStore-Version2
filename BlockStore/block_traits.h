@@ -8,7 +8,7 @@ BEGIN_NAMESPACE(BlockStore)
 
 template<class T, class = void>
 struct layout_traits {
-	static_assert((T(), false), "block layout undefined");
+	static_assert((layout_type<T>(), false), "block layout undefined");
 	static void Size(BlockSizeContext& context, const T& object) {}
 	static void Load(BlockLoadContext& context, T& object) {}
 	static void Save(BlockSaveContext& context, const T& object) {}

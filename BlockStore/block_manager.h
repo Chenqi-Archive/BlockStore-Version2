@@ -149,10 +149,11 @@ private:
 		if (!CheckNewBlock(index)) { return; }
 		std::shared_ptr<T> block = pointer_cast<T>(GetNewBlock(index));
 		BlockSizeContext size_context; Size(size_context, *block);
-		data_t block_index = AllocateBlock(size_context.GetSize());
+		data_t block_size = size_context.GetSize(); align_offset<data_t>(block_size);
+		data_t block_index = AllocateBlock(block_size);
 		SaveNewBlock(index, block_index);
 		index = block_index;
-		BlockSaveContext context = SaveBlockContext(block_index, size_context.GetSize());
+		BlockSaveContext context = SaveBlockContext(block_index, block_size);
 		Save(context, *block);
 	}
 public:
@@ -174,7 +175,7 @@ private:
 
 template<class T>
 inline BlockPtr<T>::~BlockPtr() {
-	manager.CheckBlock(index);
+	this->reset(); manager.CheckBlock(index);
 }
 
 template<class T>
