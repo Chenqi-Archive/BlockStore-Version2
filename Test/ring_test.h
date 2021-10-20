@@ -29,23 +29,23 @@ void PrintRing(RootRef root) {
 
 void BuildRing(RootRef& root, uint number) {
 	if (number <= 1) {
-		auto& node = root.Write();
-		node.number = number;
-		node.next = root;
+		auto node = root.Write();
+		node->number = number;
+		node->next = root;
 	} else {
 		BlockRef<Node> last = root.GetManager();
-		last.Write().number = number;
+		last.Write()->number = number;
 		BlockRef<Node> prev = last;
 		BlockRef<Node> curr = root.GetManager();
 		while (--number) {
-			auto& node = curr.Write();
-			node.number = number;
-			node.next = prev;
+			auto node = curr.Write();
+			node->number = number;
+			node->next = prev;
 			prev = curr;
 			curr = BlockRef<Node>(root.GetManager());
 		}
 		root = prev;
-		last.Write().next = root;
+		last.Write()->next = root;
 	}
 }
 
@@ -59,13 +59,14 @@ int main() {
 	}
 
 	BlockManager manager(std::move(file));
-	RootRef root; manager.LoadRootRef(root);
+	RootRef root;
 	try {
+		manager.LoadRootRef(root);
 		PrintRing(root);
 	} catch (std::exception&) {
 		manager.Format();
-		manager.LoadRootRef(root);
+		root = RootRef(manager);
 	}
-	BuildRing(root, 1);
+	BuildRing(root, 5);
 	manager.SaveRootRef(root);
 }

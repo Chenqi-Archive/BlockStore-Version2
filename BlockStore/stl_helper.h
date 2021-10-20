@@ -92,13 +92,13 @@ private:
 	}
 public:
 	static void Size(BlockSizeContext& context, const std::variant<Ts...>& object) {
-		context.add(object.index()); std::visit([](auto& item) { BlockStore::Size(context, item); }, object);
+		context.add(object.index()); std::visit([&](auto& item) { BlockStore::Size(context, item); }, object);
 	}
 	static void Load(BlockLoadContext& context, std::variant<Ts...>& object) {
 		data_t index; context.read(index); object = load_variant<0>(context, index);
 	}
 	static void Save(BlockSaveContext& context, const std::variant<Ts...>& object) {
-		context.write(object.index()); std::visit([](auto& item) { BlockStore::Save(context, item); }, object);
+		context.write(object.index()); std::visit([&](auto& item) { BlockStore::Save(context, item); }, object);
 	}
 };
 

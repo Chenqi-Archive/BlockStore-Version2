@@ -16,7 +16,7 @@ struct Interval {
 	uint64 length;
 
 	Interval(uint64 begin, uint64 length) : begin(begin), length(length) {
-		if (left() > right()) { throw std::invalid_argument("invalid interval"); }
+		if (left() > right()) { throw std::runtime_error("invalid interval"); }
 	}
 
 	uint64 left() const { return begin; }
@@ -42,7 +42,7 @@ FileManager::FileManager(const wchar path[], CreateMode create_mode, AccessMode 
 	file(INVALID_HANDLE_VALUE), size(0), create_mode(create_mode), access_mode(access_mode), share_mode(share_mode),
 	mapping(NULL), view_address(nullptr), view_offset(0), view_length(0) {
 	file = CreateFileW(path, (DWORD)access_mode, (DWORD)share_mode, NULL, (DWORD)create_mode, FILE_ATTRIBUTE_NORMAL, NULL);
-	if (file == INVALID_HANDLE_VALUE) { throw std::invalid_argument("create file error"); }
+	if (file == INVALID_HANDLE_VALUE) { throw std::runtime_error("create file error"); }
 	if (GetFileSizeEx(file, (PLARGE_INTEGER)&size) != TRUE) { throw std::runtime_error("get file size error"); }
 	DoMapping();
 }
@@ -79,7 +79,7 @@ void FileManager::Unlock() {
 
 byte* FileManager::Lock(uint64 offset, uint64 length) {
 	if (mapping == NULL) { throw std::runtime_error("file mapping invalid"); }
-	if (!Interval(0, size).Contains(Interval(offset, length))) { throw std::invalid_argument("invalid offset and length"); }
+	if (!Interval(0, size).Contains(Interval(offset, length))) { throw std::runtime_error("invalid offset or length"); }
 	if (Interval(view_offset, view_length).Contains(Interval(offset, length))) { return view_address + offset - view_offset; }
 	Unlock();
 	uint64 view_begin = align_offset_floor(offset, allocation_granularity);

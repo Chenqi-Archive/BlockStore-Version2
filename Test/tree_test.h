@@ -33,18 +33,20 @@ void PrintTree(BlockRef<TreeNode> node_ref, uint depth = 0) {
 
 
 void BuildTree(RootRef& root) {
-	auto& node = root.Write();
-	node.text = "root block";
-	node.child_list.resize(5, root.GetManager());
+	auto node = root.Write();
+	node->text = "root block";
+	node->child_list.resize(5);
 	data_t child_index = 0;
-	for (auto& child_ref : node.child_list) {
-		auto& child_node = child_ref.Write();
-		child_node.text = "child " + std::to_string(child_index++);
-		child_node.child_list.resize(child_index, child_ref.GetManager());
-		data_t child_index = 0;
-		for (auto& child_ref : child_node.child_list) {
-			auto& child_node = child_ref.Write();
-			child_node.text = "grand child " + std::to_string(child_index++);
+	for (auto& child_ref : node->child_list) {
+		child_ref = root.GetManager();
+		auto child_node = child_ref.Write();
+		child_node->text = "child " + std::to_string(++child_index);
+		child_node->child_list.resize(child_index);
+		data_t grand_child_index = 0;
+		for (auto& child_ref : child_node->child_list) {
+			child_ref = root.GetManager();
+			auto child_node = child_ref.Write();
+			child_node->text = "grand child " + std::to_string(child_index) + ":" + std::to_string(++grand_child_index);
 		}
 	}
 }
@@ -53,17 +55,19 @@ void BuildTree(RootRef& root) {
 int main() {
 	std::unique_ptr<FileManager> file;
 	try {
-		file.reset(new FileManager(L"R:\\test.dat"));
+		file.reset(new FileManager(L"R:\\tree_test.dat"));
 	} catch (std::runtime_error&) {
 		return 0;
 	}
 
 	BlockManager manager(std::move(file));
-	RootRef root; manager.LoadRootRef(root);
+	RootRef root;
 	try {
+		manager.LoadRootRef(root);
 		PrintTree(root);
 	} catch (std::exception&) {
-		manager.Format(); manager.LoadRootRef(root);
+		manager.Format(); 
+		root = manager;
 		BuildTree(root);
 		manager.SaveRootRef(root);
 	}
