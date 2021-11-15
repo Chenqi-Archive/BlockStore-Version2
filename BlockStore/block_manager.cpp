@@ -6,7 +6,10 @@
 BEGIN_NAMESPACE(BlockStore)
 
 
-BlockManager::BlockManager(std::unique_ptr<FileManager> file) : file(std::move(file)), cache(new BlockCache) { LoadMetaInfo(); }
+BlockManager::BlockManager(std::unique_ptr<FileManager> file) : file(std::move(file)), cache(new BlockCache) { 
+	if (this->file == nullptr) { throw std::invalid_argument("invalid file manager"); }
+	LoadMetaInfo(); 
+}
 
 BlockManager::~BlockManager() {}
 
@@ -63,8 +66,9 @@ BlockSaveContext BlockManager::SaveBlockContext(data_t index, data_t size) {
 }
 
 void BlockManager::RenewSaveContext(BlockSaveContext& context) {
-	context.data = file->Lock(context.index + sizeof(data_t), context.length);
+	data_t length_saved = context.curr - context.begin, length_remaining = context.end - context.curr;
+	context.curr = file->Lock(context.index + sizeof(data_t) + length_saved, length_remaining);
+	context.begin = context.curr - length_saved; context.end = context.curr + length_remaining;
 }
-
 
 END_NAMESPACE(BlockStore)

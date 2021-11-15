@@ -54,7 +54,7 @@ private:
 	data_t GetSavedBlockIndex(data_t index);
 	void ClearNewBlock();
 
-	// helper
+	// resource
 private:
 	template<class T>
 	struct deleter {
@@ -97,12 +97,8 @@ private:
 	}
 private:
 	template<class T>
-	BlockPtr<const T> ReadBlock(data_t index) {
-		if (index != block_index_invalid) {
-			if (is_const_block_index(index)) { return BlockPtr<const T>(GetBlock<T>(index), *this, index); }
-			if (is_new_block_index(index)) { return BlockPtr<const T>(GetNewBlock<T>(index), *this, index); }
-		}
-		throw std::runtime_error("invalid block index");
+	BlockPtr<const T> ReadBlock(data_t& index) {
+		return BlockPtr<const T>(IsNewBlock(index) ? GetNewBlock<T>(index) : GetBlock<T>(index), *this, index);
 	}
 private:
 	template<class T>
@@ -117,6 +113,17 @@ public:
 	}
 
 	// create
+private:
+	bool IsNewBlock(data_t& index) {
+		if (index != block_index_invalid) {
+			if (is_const_block_index(index)) { return false; }
+			if (is_new_block_index(index)) {
+				if (IsNewBlockSaved(index)) { index = GetSavedBlockIndex(index); return false; }
+				return true;
+			}
+		}
+		throw std::runtime_error("invalid block index");
+	}
 private:
 	template<class T>
 	std::shared_ptr<T> CreateNewBlock(data_t& index) {
@@ -140,11 +147,7 @@ private:
 private:
 	template<class T>
 	BlockPtr<T> WriteBlock(data_t& index) {
-		if (index != block_index_invalid) {
-			if (is_const_block_index(index)) { return CreateNewBlock<T>(index); }
-			if (is_new_block_index(index)) { return GetNewBlock<T>(index); }
-		}
-		throw std::runtime_error("invalid block index");
+		return IsNewBlock(index) ? GetNewBlock<T>(index) : CreateNewBlock<T>(index);
 	}
 
 	// save
@@ -152,17 +155,6 @@ private:
 	data_t AllocateBlock(data_t size);
 	BlockSaveContext SaveBlockContext(data_t index, data_t size);
 	void RenewSaveContext(BlockSaveContext& context);
-private:
-	bool IsNewBlock(data_t& index) {
-		if (index != block_index_invalid) {
-			if (is_const_block_index(index)) { return false; }
-			if (is_new_block_index(index)) { 
-				if (IsNewBlockSaved(index)) { index = GetSavedBlockIndex(index); return false; }
-				return true;
-			}
-		}
-		throw std::runtime_error("invalid block index");
-	}
 private:
 	template<class T>
 	void SaveBlock(data_t& index) {

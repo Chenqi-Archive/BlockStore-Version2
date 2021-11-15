@@ -13,7 +13,7 @@ class BlockManager;
 template<class T>
 class BlockPtr : public std::shared_ptr<T> {
 public:
-	using std::shared_ptr<T>::shared_ptr;
+	BlockPtr(std::shared_ptr<T> ptr) : std::shared_ptr<T>(ptr) {}
 public:
 	operator T& () const { return *this->get(); }
 	operator T* () const { return this->get(); }
@@ -25,7 +25,7 @@ private:
 	BlockManager& manager;
 	const data_t index;
 public:
-	BlockPtr(std::shared_ptr<const T> ptr, BlockManager& manager, data_t index) : 
+	BlockPtr(std::shared_ptr<const T> ptr, BlockManager& manager, data_t index) :
 		std::shared_ptr<const T>(ptr), manager(manager), index(index) {}
 	~BlockPtr();
 public:

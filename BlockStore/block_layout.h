@@ -29,12 +29,4 @@ template<class T>
 constexpr bool has_trivial_layout = std::is_trivial_v<T> && !has_custom_layout<T>;
 
 
-template<class T>
-constexpr void align_offset(data_t& offset) {
-	constexpr data_t alignment = sizeof(T) <= 8 ? sizeof(T) : 8;
-	static_assert((alignment & (alignment - 1)) == 0);  // 1, 2, 4, 8
-	offset = (offset + (alignment - 1)) & ~(alignment - 1);
-}
-
-
 END_NAMESPACE(BlockStore)
