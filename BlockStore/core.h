@@ -28,4 +28,7 @@ using byte = std::byte;
 using data_t = size_t;
 
 
+constexpr data_t block_index_invalid = -1;
+
+
 END_NAMESPACE(BlockStore)

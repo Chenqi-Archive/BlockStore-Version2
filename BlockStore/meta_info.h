@@ -5,8 +5,6 @@
 
 BEGIN_NAMESPACE(BlockStore)
 
-constexpr data_t block_index_invalid = -1;
-
 
 struct MetaInfo {
 	data_t file_size = 0;

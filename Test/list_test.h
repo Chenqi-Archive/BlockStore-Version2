@@ -57,6 +57,7 @@ int main() {
 	} catch (std::exception&) {
 		manager.Format();
 		root = RootRef(manager);
+		root.Read();
 	}
 	manager.SaveRootRef(root);
 }

@@ -23,7 +23,7 @@ template<class T>
 class BlockPtr<const T> : public std::shared_ptr<const T> {
 private:
 	BlockManager& manager;
-	const data_t index;
+	mutable data_t index;
 public:
 	BlockPtr(std::shared_ptr<const T> ptr, BlockManager& manager, data_t index) :
 		std::shared_ptr<const T>(ptr), manager(manager), index(index) {}

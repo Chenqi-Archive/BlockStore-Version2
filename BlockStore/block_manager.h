@@ -187,7 +187,7 @@ private:
 
 template<class T>
 inline BlockPtr<const T>::~BlockPtr() {
-	this->reset(); manager.CheckCachedBlock(index);
+	this->reset(); if (!manager.IsNewBlock(index)) { manager.CheckCachedBlock(index); }
 }
 
 template<class T>
